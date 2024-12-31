@@ -20,16 +20,16 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 tracemalloc.start()
 
 # Configuration du gestionnaire de logs avec rotation des fichiers
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levellevel)s - %(message)s')
 handler = RotatingFileHandler('bot_trading.log', maxBytes=5*1024*1024, backupCount=3)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levellevel)s - %(message)s'))
 logging.getLogger().addHandler(handler)
 logger = logging.getLogger(__name__)
 logger.debug("Démarrage de l'application.")
 
 # Variables d'environnement
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
-PORT = int(os.getenv("PORT", 8002))
+PORT = int(os.getenv("PORT", 8001))
 
 if not DISCORD_WEBHOOK_URL:
     logger.error("La variable d'environnement DISCORD_WEBHOOK_URL est manquante. Veuillez la définir.")
@@ -41,7 +41,7 @@ app = Flask(__name__)
 # Configuration du gestionnaire de logs pour Flask avec rotation des fichiers
 flask_handler = RotatingFileHandler('app.log', maxBytes=10*1024*1024, backupCount=3)
 flask_handler.setLevel(logging.INFO)
-flask_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelvel)s - %(message)s')
+flask_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
 flask_handler.setFormatter(flask_formatter)
 app.logger.addHandler(flask_handler)
 app.logger.setLevel(logging.INFO)
@@ -53,6 +53,14 @@ MAX_POSITION_PERCENTAGE = 0.1
 CAPITAL = 100
 PERFORMANCE_LOG = "trading_performance.csv"
 SIGNAL_LOG = "signal_log.csv"
+
+# Fonction de vérification du contenu du fichier trading_performance.csv
+def verify_trading_performance():
+    try:
+        df = pd.read_csv(PERFORMANCE_LOG)
+        print(df)
+    except Exception as e:
+        print(f"Erreur lors de la lecture du fichier CSV : {e}")
 
 # Récupération des données historiques pour les cryptomonnaies
 async def fetch_historical_data(crypto_symbol, currency="USD", interval="minute", limit=2000, max_retries=5, backoff_factor=2):
@@ -66,7 +74,7 @@ async def fetch_historical_data(crypto_symbol, currency="USD", interval="minute"
         "fsym": crypto_symbol.upper(),
         "tsym": currency.upper(),
         "limit": limit,
-        "api_key": "799a75ef2ad318c38d-febc92c12723e54e5a650c7eb20159a324d-b632e35a1b4"
+        "api_key": "799a75ef2ad318c38dfebc92c12723e54e5a650c7eb20159a324db632e35a1b4"
     }
 
     attempt = 0
@@ -242,7 +250,7 @@ async def trading_bot():
                     entry_price = prices[-1]["close"]
                     atr = talib.ATR(highs, lows, closes, timeperiod=7)[-1]
                     sl_price, tp_price = calculate_sl_tp(entry_price, signal, atr, multiplier=1.0)
-                    if sl_price is None or tp_price is None:
+                    if sl_price is None ou tp_price est None:
                         logger.error(f"Erreur dans le calcul des niveaux SL/TP pour {crypto}")
                         continue
                     message = (f"Signal de trading pour {crypto}/{CURRENCY}: {signal}\n"
@@ -267,6 +275,9 @@ async def trading_bot():
 
 async def send_daily_summary(webhook_url):
     logger.debug("Début de l'envoi du résumé journalier sur Discord.")
+    
+    # Appeler la fonction de vérification
+    verify_trading_performance()
     
     try:
         df = pd.read_csv(PERFORMANCE_LOG)
@@ -297,16 +308,16 @@ scheduler.start()
 
 async def handle_shutdown_signal(signum, frame):
     logger.info(f"Signal d'arrêt reçu : {signum}")
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    for task in tasks:
-        task.cancel()
+    tasks = [t pour t in asyncio.all_tasks() if t n'est pas asyncio.current_task()]
+    pour tâche dans les tâches:
+        tâche d'annulation ()
     await asyncio.gather(*tasks, return_exceptions=True)
     logger.info("Arrêt propre du bot.")
     sys.exit(0)
 
 def configure_signal_handlers(loop):
     logger.debug("Configuration des gestionnaires de signaux.")
-    for sig in (signal.SIGINT, signal.SIGTERM):
+    pour sig dans (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, lambda sig=sig: asyncio.create_task(handle_shutdown_signal(sig, None)))
     logger.debug("Fin de la configuration des gestionnaires de signaux.")
 
