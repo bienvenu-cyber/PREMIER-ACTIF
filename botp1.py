@@ -308,9 +308,9 @@ scheduler.start()
 
 async def handle_shutdown_signal(signum, frame):
     logger.info(f"Signal d'arrêt reçu : {signum}")
-    tasks = [t pour t in asyncio.all_tasks() if t not asyncio.current_task()]
-    pour tâche dans les tâches:
-        tâche d'annulation ()
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    for task in tasks:
+        task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
     logger.info("Arrêt propre du bot.")
     sys.exit(0)
