@@ -27,7 +27,7 @@ logger.debug("Démarrage de l'application.")
 
 # Variables d'environnement
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
-PORT = int(os.getenv("PORT", 8002))
+PORT = int(os.getenv("PORT", 8001))
 
 if not DISCORD_WEBHOOK_URL:
     logger.error("La variable d'environnement DISCORD_WEBHOOK_URL est manquante. Veuillez la définir.")
@@ -64,7 +64,7 @@ async def fetch_historical_data(crypto_symbol, currency="USD", interval="hour", 
         "fsym": crypto_symbol.upper(),
         "tsym": currency.upper(),
         "limit": limit,
-        "api_key": "70001b698e6a3d349e68ba1b03e7489153644e38c5026b4a33d55c8e460c7a3c"
+        "api_key": "799a75ef2ad318c38dfebc92c12723e54e5a650c7eb20159a324db632e35a1b4"
     }
 
     attempt = 0
