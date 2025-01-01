@@ -288,8 +288,8 @@ async def trading_bot():
 
         log_memory_usage()
 
-        await asyncio.sleep(60)
-        logger.debug("Finished waiting 1 minute.")
+        await asyncio.sleep(900)
+        logger.debug("Finished waiting 15 minute.")
     
     logger.info("Finished trading task.")
 
