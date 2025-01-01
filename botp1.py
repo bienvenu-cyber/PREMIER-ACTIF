@@ -130,7 +130,7 @@ async def fetch_historical_data(crypto_symbol, currency="USD", interval="minute"
 # Function to calculate indicators with TA-Lib
 def calculate_indicators(prices):
     logger.debug("Starting to calculate indicators.")
-    if len(prices) < 20:
+    if len(prices) < 200:
         raise ValueError("Not enough data to calculate indicators.")
 
     opens = np.array([price["open"] for price in prices])
@@ -138,31 +138,35 @@ def calculate_indicators(prices):
     lows = np.array([price["low"] for price in prices])
     closes = np.array([price["close"] for price in prices])
 
-    # Calculate indicators
     ema_50 = talib.EMA(closes, timeperiod=50)
     ema_200 = talib.EMA(closes, timeperiod=200)
-    macd, macd_signal, _ = talib.MACD(closes, fastperiod=12, slowperiod=26, signalperiod=9)
-    rsi = talib.RSI(closes, timeperiod=14)
+    macd, macd_signal, macd_hist = talib.MACD(closes, fastperiod=12, slowperiod=26, signalperiod=9)
+    atr = talib.ATR(highs, lows, closes, timeperiod=14)
     upper_band, middle_band, lower_band = talib.BBANDS(closes, timeperiod=20, nbdevup=2, nbdevdn=2, matype=0)
+    rsi = talib.RSI(closes, timeperiod=14)
     slowk, slowd = talib.STOCH(highs, lows, closes, fastk_period=14, slowk_period=3, slowd_period=3)
+    adx = talib.ADX(highs, lows, closes, timeperiod=14)
+    cci = talib.CCI(highs, lows, closes, timeperiod=14)
 
+    logger.debug(f"Indicators calculated: EMA_50={ema_50[-1]}, EMA_200={ema_200[-1]}, MACD={macd[-1]}, ATR={atr[-1]}, Upper_Band={upper_band[-1]}, Lower_Band={lower_band[-1]}, RSI={rsi[-1]}, Stochastic_K={slowk[-1]}, Stochastic_D={slowd[-1]}, ADX={adx[-1]}, CCI={cci[-1]}")
     logger.debug("Finished calculating indicators.")
 
     return {
-        "EMA_50": ema_50,
-        "EMA_200": ema_200,
-        "MACD": macd,
-        "MACD_Signal": macd_signal,
-        "RSI": rsi,
-        "Upper_Band": upper_band,
-        "Middle_Band": middle_band,
-        "Lower_Band": lower_band,
-        "Stochastic_K": slowk,
-        "Stochastic_D": slowd
+        "EMA_50": ema_50[-1],
+        "EMA_200": ema_200[-1],
+        "MACD": macd[-1],
+        "MACD_Signal": macd_signal[-1],
+        "ATR": atr[-1],
+        "Upper_Band": upper_band[-1],
+        "Lower_Band": lower_band[-1],
+        "RSI": rsi[-1],
+        "Stochastic_K": slowk[-1],
+        "Stochastic_D": slowd[-1],
+        "ADX": adx[-1],
+        "CCI": cci[-1]
     }
 
-# Adjusted function to calculate SL and TP based on ATR with increased multiplier
-def calculate_sl_tp(entry_price, signal_type, atr, multiplier=2.0):  # Adjusted multiplier
+def calculate_sl_tp(entry_price, signal_type, atr, multiplier=2.0):  # Adjust the multiplier to 2.0
     logger.debug("Starting to calculate Stop Loss and Take Profit levels.")
     if signal_type == "Buy":
         sl_price = entry_price - (multiplier * atr)
@@ -178,36 +182,22 @@ def calculate_sl_tp(entry_price, signal_type, atr, multiplier=2.0):  # Adjusted 
     logger.debug("Finished calculating Stop Loss and Take Profit levels.")
     return sl_price, tp_price
 
-# Function to analyze signals
 def analyze_signals(prices):
     logger.debug("Starting to analyze signals.")
     indicators = calculate_indicators(prices)
 
-    current_price = prices[-1]["close"]
-    ema_50 = indicators["EMA_50"][-1]
-    ema_200 = indicators["EMA_200"][-1]
-    macd = indicators["MACD"][-1]
-    macd_signal = indicators["MACD_Signal"][-1]
-    rsi = indicators["RSI"][-1]
-    upper_band = indicators["Upper_Band"][-1]
-    lower_band = indicators["Lower_Band"][-1]
-    slowk = indicators["Stochastic_K"][-1]
-    slowd = indicators["Stochastic_D"][-1]
-
     buy_conditions = (
-        current_price > ema_50 > ema_200,
-        macd > macd_signal,
-        rsi > 30,
-        slowk < 20,
-        current_price <= lower_band
+        closes[-1] > indicators['EMA_50'] and closes[-1] > indicators['EMA_200'],
+        indicators['MACD'] > indicators['MACD_Signal'],
+        indicators['RSI'] > 30,
+        closes[-1] <= indicators['Lower_Band']
     )
 
     sell_conditions = (
-        current_price < ema_50 < ema_200,
-        macd < macd_signal,
-        rsi < 70,
-        slowk > 80,
-        current_price >= upper_band
+        closes[-1] < indicators['EMA_50'] and closes[-1] < indicators['EMA_200'],
+        indicators['MACD'] < indicators['MACD_Signal'],
+        indicators['RSI'] < 70,
+        closes[-1] >= indicators['Upper_Band']
     )
 
     if all(buy_conditions):
@@ -221,7 +211,6 @@ def analyze_signals(prices):
     logger.debug("Finished analyzing signals.")
     return decision
 
-# Function to send a message to Discord
 async def send_discord_message(webhook_url, message):
     logger.debug(f"Starting to send a Discord message via webhook.")
     data = {
@@ -241,7 +230,6 @@ async def send_discord_message(webhook_url, message):
         logger.error("Request timed out.")
     logger.debug("Finished sending Discord message.")
 
-# Function to log memory usage
 def log_memory_usage():
     logger.debug("Starting to log memory usage.")
     current, peak = tracemalloc.get_traced_memory()
@@ -249,7 +237,6 @@ def log_memory_usage():
     tracemalloc.clear_traces()
     logger.debug("Finished logging memory usage.")
 
-# Main trading bot function
 async def trading_bot():
     logger.info("Starting trading task.")
     last_sent_signals = {}  # Dictionary to store the last sent signal for each cryptocurrency
@@ -280,7 +267,7 @@ async def trading_bot():
                     active_positions[crypto] = signal  # Mark the position as active
 
                     entry_price = prices[-1]["close"]
-                    atr = talib.ATR(highs, lows, closes, timeperiod=7)[-1]
+                    atr = talib.ATR(highs, lows, closes, timeperiod=14)[-1]
                     sl_price, tp_price = calculate_sl_tp(entry_price, signal, atr, multiplier=2.0)  # Use the new multiplier
                     
                     if sl_price is None or tp_price is None:
@@ -306,7 +293,6 @@ async def trading_bot():
     
     logger.info("Finished trading task.")
 
-# Function to send daily summary
 async def send_daily_summary(webhook_url):
     logger.debug("Starting to send daily summary on Discord.")
     
@@ -332,12 +318,10 @@ async def send_daily_summary(webhook_url):
 
     logger.debug("Finished sending daily summary on Discord.")
 
-# Schedule the daily summary job
 scheduler = AsyncIOScheduler()
 scheduler.add_job(send_daily_summary, 'interval', days=1, args=[DISCORD_WEBHOOK_URL], next_run_time=datetime.datetime.now() + datetime.timedelta(seconds=10))
 scheduler.start()
 
-# Handle shutdown signals
 async def handle_shutdown_signal(signum, frame):
     logger.info(f"Shutdown signal received: {signum}")
     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
@@ -347,26 +331,22 @@ async def handle_shutdown_signal(signum, frame):
     logger.info("Clean shutdown of the bot.")
     sys.exit(0)
 
-# Configure signal handlers
 def configure_signal_handlers(loop):
     logger.debug("Configuring signal handlers.")
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, lambda sig=sig: asyncio.create_task(handle_shutdown_signal(sig, None)))
     logger.debug("Finished configuring signal handlers.")
 
-# Flask route
 @app.route("/")
 def home():
     logger.info("Request received on '/'")
     return jsonify({"status": "Trading bot operational."})
 
-# Run Flask application
 async def run_flask():
     logger.debug("Starting Flask application.")
     await asyncio.to_thread(app.run, host='0.0.0.0', port=PORT, threaded=True, use_reloader=False, debug=True)
     logger.debug("Finished starting Flask application.")
 
-# Main function
 async def main():
     logger.info("Starting main execution.")
     await asyncio.gather(
