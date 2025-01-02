@@ -1,16 +1,19 @@
 # Use a base Python image
 FROM python:3.11-slim
 
-# Update pip and install system dependencies
-RUN apt-get update && apt-get install -y \
+# Installer les dépendances système nécessaires pour psycopg2 et TA-Lib
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     wget \
+    gcc \
     libpq-dev \
     libtool \
-    autoconf && \
-    rm -rf /var/lib/apt/lists/*
+    autoconf \
+    make \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Download and install TA-Lib
+# Télécharger et installer TA-Lib à partir des sources
 RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
     tar -xzvf ta-lib-0.4.0-src.tar.gz && \
     cd ta-lib && \
@@ -20,7 +23,7 @@ RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
     cd .. && \
     rm -rf ta-lib-0.4.0-src.tar.gz ta-lib
 
-# Define the working directory
+# Définir le répertoire de travail
 WORKDIR /app
 
 # Copy the necessary files into the Docker image
