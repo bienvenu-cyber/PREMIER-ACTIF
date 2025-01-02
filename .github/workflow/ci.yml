@@ -1,7 +1,10 @@
-name: CI Workflow
+name: Docker Build Pipeline
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -9,15 +12,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    # Build Docker image
     - name: Build Docker image
       run: |
-        docker build -t my-bot .
+        docker build . -t trading-bot:latest
 
-    # Run Docker container
-    - name: Run Docker container
+    - name: Test Docker image
       run: |
-        docker run -d -p 8001:8001 my-bot
+        docker run trading-bot:latest
