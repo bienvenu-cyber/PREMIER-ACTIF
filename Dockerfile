@@ -1,19 +1,18 @@
-# Utiliser une image de base Python
+# Use a base Python image
 FROM python:3.11-slim
 
-# Mettre à jour pip
-RUN pip install --upgrade pip
-
-# Installer les dépendances système nécessaires pour psycopg2 et TA-Lib
+# Update pip and install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
     libpq-dev \
     libtool \
     autoconf \
-    && rm -rf /var/lib/apt/lists/*
+    python3-dev \
+    gcc && \
+    rm -rf /var/lib/apt/lists/*
 
-# Télécharger et installer TA-Lib à partir des sources
+# Download and install TA-Lib
 RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
     tar -xzvf ta-lib-0.4.0-src.tar.gz && \
     cd ta-lib && \
@@ -23,22 +22,23 @@ RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
     cd .. && \
     rm -rf ta-lib-0.4.0-src.tar.gz ta-lib
 
-# Définir le répertoire de travail
+# Define the working directory
 WORKDIR /app
 
-# Copier les fichiers nécessaires dans l'image Docker
+# Copy the necessary files into the Docker image
 COPY requirements.txt /app/requirements.txt
 COPY botp1.py /app/botp1.py
 
-# Ajouter les variables d'environnement
+# Add environment variables
 ENV DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1321172226908622879/asSC9QXdPDnCu7XrMeDzQfiWNlaG3Ui5diE28FYtEvbE8nxeeH9WjNcMSqQTLolgtpf2
 ENV PORT=8001
 
-# Installer les dépendances Python
+# Install Python dependencies
+RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Exposer le port sur lequel l'application écoute
+# Expose the port on which the application listens
 EXPOSE 8001
 
-# Commande de démarrage pour python
+# Command to start the application
 CMD ["python", "botp1.py"]
